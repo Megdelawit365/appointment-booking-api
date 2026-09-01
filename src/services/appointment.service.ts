@@ -1,7 +1,7 @@
 import type { CreateAppointmentInput, UpdateAppointmentInput } from "../schemas/appointment.schema.js"
 
 interface Appointment extends CreateAppointmentInput {
-    id: number
+    id: string
 }
 
 const appointments: Appointment[] = []
@@ -38,14 +38,14 @@ export const getAppointments = async (filters?: AppointmentQueryFilters): Promis
     })
 }
 
-export const getAppointmentById = async (id: number): Promise<Appointment | null> => {
+export const getAppointmentById = async (id: string): Promise<Appointment | null> => {
     const appointment = appointments.find((a) => a.id === id)
     return appointment || null
 }
 
 export const createAppointment = async (data: CreateAppointmentInput): Promise<Appointment> => {
     const newAppointment: Appointment = {
-        id: id,
+        id: String(id),
         appointmentDate: data.appointmentDate,
         patientEmail: data.patientEmail,
         patientName: data.patientName,
@@ -59,7 +59,7 @@ export const createAppointment = async (data: CreateAppointmentInput): Promise<A
     return newAppointment
 }
 
-export const updateAppointment = async (id: number, data: UpdateAppointmentInput): Promise<Appointment | null> => {
+export const updateAppointment = async (id: string, data: UpdateAppointmentInput): Promise<Appointment | null> => {
     const index = appointments.findIndex((a) => a.id === id)
     if (index === -1) {
         return null
@@ -75,7 +75,7 @@ export const updateAppointment = async (id: number, data: UpdateAppointmentInput
     return updatedAppointment
 }
 
-export const deleteAppointment = async (id: number): Promise<boolean> => {
+export const deleteAppointment = async (id: string): Promise<boolean> => {
     const index = appointments.findIndex((a) => a.id === id)
     if (index === -1) {
         return false
