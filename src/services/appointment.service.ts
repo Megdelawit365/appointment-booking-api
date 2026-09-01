@@ -13,7 +13,7 @@ export interface AppointmentQueryFilters {
     isEmergency?: boolean
 }
 
-export const getAppointmentsService = async (filters?: AppointmentQueryFilters): Promise<Appointment[]> => {
+export const getAppointments = async (filters?: AppointmentQueryFilters): Promise<Appointment[]> => {
     if (!filters || Object.keys(filters).length === 0) {
         return appointments
     }
