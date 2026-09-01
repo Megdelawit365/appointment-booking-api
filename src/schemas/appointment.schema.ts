@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 
-const createAppointmentSchema = z.object({
+export const createAppointmentSchema = z.object({
     body: z.object({
         patientName: z
             .string({ message: "Patient name is required." })
@@ -43,7 +43,7 @@ const createAppointmentSchema = z.object({
 
 })
 
-const updateAppointmentSchema = z.object({
+export const updateAppointmentSchema = z.object({
     body: createAppointmentSchema.shape.body.partial()
 })
 
