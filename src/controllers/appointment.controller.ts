@@ -17,12 +17,12 @@ export const getAppointments = async (
 }
 
 export const getAppointmentById = async (
-    req: Request<{ id: number }>,
+    req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const appointment = await appointmentServices.getAppointmentById(Number(req.params.id))
+        const appointment = await appointmentServices.getAppointmentById(req.params.id)
         if (!appointment) {
             return res.status(404).json({ message: "Appointment not found" });
         }
@@ -46,7 +46,7 @@ export const createAppointment = async (
 }
 
 export const updateAppointment = async (
-    req: Request<{ id: number }, {}, UpdateAppointmentInput>,
+    req: Request<{ id: string }, {}, UpdateAppointmentInput>,
     res: Response,
     next: NextFunction
 ) => {
@@ -63,7 +63,7 @@ export const updateAppointment = async (
 }
 
 export const deleteAppointment = async (
-    req: Request<{ id: number }>,
+    req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
 ) => {
