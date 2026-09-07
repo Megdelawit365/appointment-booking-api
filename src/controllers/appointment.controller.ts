@@ -16,12 +16,12 @@ export const getAppointments = async (
 }
 
 export const getAppointmentById = async (
-    req: Request<{ id: number }>,
+    req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const appointment = await appointmentServices.getAppointmentById(req.params.id)
+        const appointment = await appointmentServices.getAppointmentById(Number(req.params.id))
         if (!appointment) {
             return res.status(404).json({ message: "Appointment not found" });
         }
@@ -45,12 +45,12 @@ export const createAppointment = async (
 }
 
 export const updateAppointment = async (
-    req: Request<{ id: number }, {}, UpdateAppointmentInput>,
+    req: Request<{ id: string }, {}, UpdateAppointmentInput>,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const updatedAppointment = await appointmentServices.updateAppointment(req.params.id, req.body)
+        const updatedAppointment = await appointmentServices.updateAppointment(Number(req.params.id), req.body)
 
         if (!updatedAppointment) {
             return res.status(404).json({ message: "Appointment not found" });
@@ -62,12 +62,12 @@ export const updateAppointment = async (
 }
 
 export const deleteAppointment = async (
-    req: Request<{ id: number }>,
+    req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const deleteAppointment = await appointmentServices.deleteAppointment(req.params.id)
+        const deleteAppointment = await appointmentServices.deleteAppointment(Number(req.params.id))
 
         if (!deleteAppointment) {
             return res.status(404).json({ message: "Appointment not found" });
