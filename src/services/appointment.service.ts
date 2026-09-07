@@ -1,85 +1,56 @@
 import type { CreateAppointmentInput, UpdateAppointmentInput } from "../schemas/appointment.schema.js"
-
-interface Appointment extends CreateAppointmentInput {
-    id: string
-}
-
-const appointments: Appointment[] = []
-let id = 1
+import { prisma } from "../lib/prisma.js"
+import { Appointment, DepartmentEnum, Prisma } from "../generated/prisma/index.js"
 
 export interface AppointmentQueryFilters {
-    department?: string
+    department?: DepartmentEnum
     search?: string
     isEmergency?: boolean
 }
 
 export const getAppointments = async (filters?: AppointmentQueryFilters): Promise<Appointment[]> => {
-    if (!filters || Object.keys(filters).length === 0) {
-        return appointments
-    }
+    const { department, search, isEmergency } = filters || {}
 
-    return appointments.filter((app) => {
-        let match = true
-
-        if (filters.department) {
-            match = match && app.department === filters.department
-        }
-
-        if (filters.search) {
-            match = match && (app.patientName.toLowerCase().includes(filters.search.toLowerCase())
-                || app.symptoms.toLowerCase().includes(filters.search.toLowerCase()))
-        }
-
-        if (filters.isEmergency !== undefined) {
-            match = match && app.isEmergency === filters.isEmergency
-        }
-
-        return match
+    return await prisma.appointment.findMany({
+        where: {
+            ...(department && { department }),
+            ...(isEmergency !== undefined && { isEmergency }),
+            ...(search && {
+                OR: [
+                    { patientName: { contains: search, mode: 'insensitive' } },
+                    { symptoms: { contains: search, mode: 'insensitive' } }
+                ]
+            })
+        },
     })
 }
 
-export const getAppointmentById = async (id: string): Promise<Appointment | null> => {
-    const appointment = appointments.find((a) => a.id === id)
-    return appointment || null
+export const getAppointmentById = async (id: number): Promise<Appointment | null> => {
+    const appointment = await prisma.appointment.findUnique({ where: { id: id } })
+    return appointment
 }
 
 export const createAppointment = async (data: CreateAppointmentInput): Promise<Appointment> => {
-    const newAppointment: Appointment = {
-        id: String(id),
-        appointmentDate: data.appointmentDate,
-        patientEmail: data.patientEmail,
-        patientName: data.patientName,
-        patientPhone: data.patientPhone,
-        department: data.department,
-        isEmergency: data.isEmergency,
-        symptoms: data.symptoms
-    }
-    id += 1
-    appointments.push(newAppointment)
+    const newAppointment = await prisma.appointment.create({
+        data: data
+    })
     return newAppointment
 }
 
-export const updateAppointment = async (id: string, data: UpdateAppointmentInput): Promise<Appointment | null> => {
-    const index = appointments.findIndex((a) => a.id === id)
-    if (index === -1) {
-        return null
-    }
-
-    // keeps all existing fields and  re writes only the ones passed in data
-    const updatedAppointment: Appointment = {
-        ...appointments[index],
-        ...data,
-    }
-
-    appointments[index] = updatedAppointment
+export const updateAppointment = async (id: number, data: UpdateAppointmentInput): Promise<Appointment | null> => {
+    const updatedAppointment = await prisma.appointment.update({
+        where: { id: id },
+        data: data
+    })
     return updatedAppointment
+
 }
 
-export const deleteAppointment = async (id: string): Promise<boolean> => {
-    const index = appointments.findIndex((a) => a.id === id)
-    if (index === -1) {
-        return false
-    }
-    appointments.splice(index, 1)
+export const deleteAppointment = async (id: number): Promise<boolean> => {
+    await prisma.appointment.delete({
+        where: {
+            id: id
+        }
+    })
     return true
 }
