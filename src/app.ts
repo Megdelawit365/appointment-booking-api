@@ -18,4 +18,5 @@ app.get("/api/health", (req, res) => {
 app.use("/api/appointments", appointmentRoutes)
 app.use(notFound)
 app.use(errorHandler)
+
 export default app
