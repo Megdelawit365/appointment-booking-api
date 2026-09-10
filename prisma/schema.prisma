@@ -13,7 +13,8 @@ datasource db {
 }
 
 enum RoleEnum {
-  USER
+  PATIENT
+  DOCTOR
   ADMIN
 }
 
