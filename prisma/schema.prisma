@@ -12,6 +12,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum RoleEnum {
+  USER
+  ADMIN
+}
+
 enum Department {
   GENERAL_PRACTICE
   DENTISTRY
@@ -41,6 +46,7 @@ model User {
   accounts           Account[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+  authSessions       AuthSession[]
 
   @@map("users")
 }
@@ -59,7 +65,7 @@ model Account {
 
 model Role {
   id          String           @id @default(uuid())
-  name        String           @unique
+  name        RoleEnum         @unique
   permissions RolePermission[]
   users       User[]
 
@@ -101,4 +107,22 @@ model Appointment {
   @@index([appointmentDate])
   @@index([department])
   @@map("appointments")
+}
+
+model AuthSession {
+  id                   String    @id @default(uuid())
+  userId               String
+  currentRefreshDigest String
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  userAgent            String?
+  ipAddress            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
 }
