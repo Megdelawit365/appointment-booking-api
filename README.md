@@ -1,46 +1,47 @@
-# Appointment Booking API
+# Appontment booking api
 
-RESTful API for booking and managing appointments built with Node.js, Express, TypeScript, Zod, and Prisma.
+This project is a backend api for managing medical appointments. It allows users to register, log in, book appointments and manage schedules securely.
 
-## Features
 
-- Create, view, update, and delete appointments
-- Validate input data with Zod
-- Type safety across requests and parameters with TypeScript
-- Store data in memory using arrays
+## setup instructions
 
-## API Endpoints
+1. clone the repository
 
-- GET /appointments - Get all appointments with optional query filtering
-- GET /appointments/:id - Get a single appointment by ID
-- POST /appointments - Create a new appointment
-- PATCH /appointments/:id - Update an  appointment
-- DELETE /appointments/:id - Delete an appointment
-
-## Tech Stack
-
-- Node.js
-- Express
-- TypeScript
-- Zod
-
-## Setup Instructions
-
-- Clone the repository
-
-```bash
-git clone https://github.com/Megdelawit365/appointment-booking-api
-cd appointment-booking-api
-```
-
-- Install dependencies
-
-```bash
+2. install dependencies by running:
 npm install
-```
 
-- Start server
+1. create a .env file in the root directory and configure your environment variables according to the .env.example file
 
-```bash
+2. run database migrations to setup the postgresql tables:
+npx prisma migrate dev
+
+5. seed the database with default roles and permissions:
+npx prisma db seed
+
+1. start the  server:
 npm run dev
-```
+
+## key features
+
+* user registration and login .
+* sign in using google oauth 2.0.
+* authentication using short lived access tokens and refresh cookies.
+* role based access for patients, doctors and admins.
+* appointment creation with time and operating hour checks.
+* ownership checks to prevent unauthorized access.
+
+## api endpoints
+
+* post /api/auth/register - create a new patient account.
+* post /api/auth/login - log in with email and password.
+* post /api/auth/refresh - refresh access token using cookies.
+* post /api/auth/logout - log out and invalidate refresh token.
+* get /api/auth/google - start google oauth sign in process.
+* get /api/auth/google/callback - finish google oauth sign in process.
+* post /api/appointments - create a new appointment.
+* get /api/appointments - fetch allowed appointments list.
+* get /api/appointments/:id - fetch specific appointment by id.
+* patch /api/appointments/:id - update pending appointment details.
+* patch /api/appointments/:id/status - update appointment status for doctors and admins.
+* delete /api/appointments/:id - cancel a pending appointment.
+* get /api/admin/metrics - view system metrics for administrators.
