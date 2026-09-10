@@ -31,9 +31,10 @@ export function verifyAccessToken(token: string): AuthUser {
 export function verifyRefreshToken(token: string): {
   userId: string;
   tokenVersion: number
-} {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET) as {
-    userId: string;
-    tokenVersion: number
+} | null {
+  try {
+    return jwt.verify(token, env.JWT_REFRESH_SECRET) as { userId: string; tokenVersion: number }
+  } catch {
+    return null
   }
 }
