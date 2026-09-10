@@ -1,5 +1,5 @@
 import { z } from "zod"
-
+const AppointmentStatusEnum = z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]);
 
 export const createAppointmentSchema = z.object({
     body: z.object({
@@ -46,6 +46,12 @@ export const createAppointmentSchema = z.object({
 export const updateAppointmentSchema = z.object({
     body: createAppointmentSchema.shape.body.partial()
 })
+export const updateStatusSchema = z.object({
+    body: z.object({
+        status: AppointmentStatusEnum,
+        notes: z.string().optional(),
+    }),
+});
 
 export type CreateAppointmentInput = z.infer<typeof createAppointmentSchema>['body'];
 export type UpdateAppointmentInput = z.infer<typeof updateAppointmentSchema>['body'];
