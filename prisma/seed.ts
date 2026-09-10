@@ -35,18 +35,19 @@ async function main() {
         data: { name: "ADMIN" }
     })
 
-    // create permissions
 
     const patientPerms = ["appointments:create", "appointments:read:own", "appointments:update:own", "appointments:delete:own"]
     const doctorPerms = ["appointments:read:all"]
     const adminPerms = [...permissions]
+
+    // create role-permissions
 
     for (const action of patientPerms) {
         // find each permission to get its id
         const perm = await prisma.permission.findUnique({ where: { action: action } })
         if (perm) {
             await prisma.rolePermission.create({
-                data: { roleId: patientRole.id, permissionId: perm.id },
+                data: { roleId: patientRole.id, permissionId: perm.id }
             })
         }
     }
@@ -57,7 +58,7 @@ async function main() {
         const perm = await prisma.permission.findUnique({ where: { action: action } })
         if (perm) {
             await prisma.rolePermission.create({
-                data: { roleId: doctorRole.id, permissionId: perm.id },
+                data: { roleId: doctorRole.id, permissionId: perm.id }
             })
         }
     }
@@ -68,7 +69,7 @@ async function main() {
         const perm = await prisma.permission.findUnique({ where: { action: action } })
         if (perm) {
             await prisma.rolePermission.create({
-                data: { roleId: adminRole.id, permissionId: perm.id },
+                data: { roleId: adminRole.id, permissionId: perm.id }
             })
         }
     }
