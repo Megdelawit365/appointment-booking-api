@@ -74,11 +74,9 @@ export async function loginUser(email: string, pass: string) {
 }
 
 export async function refreshSession(token: string) {
-    let decoded
-    try {
-        decoded = verifyRefreshToken(token)
-    } catch (err) {
-        throw { status: 401, message: "Invalid or expired refresh token" }
+    const decoded = verifyRefreshToken(token)
+    if (!decoded) {
+        throw { status: 401, message: "Invalid or expired refresh token" };
     }
 
     const user = await prisma.user.findUnique({
@@ -90,19 +88,25 @@ export async function refreshSession(token: string) {
         if (user) {
             await prisma.user.update({
                 where: { id: user.id },
-                data: { tokenVersion: { increment: 1 }, hashedRefreshToken: null },
+                data: {
+                    tokenVersion: { increment: 1 }
+                    , hashedRefreshToken: null
+                },
             })
         }
-        throw { status: 403, message: "Token reuse detected. All sessions revoked." }
+        throw { status: 403, message: "Invalid refresh token" }
     }
 
     const isMatching = await comparePassword(token, user.hashedRefreshToken)
     if (!isMatching) {
         await prisma.user.update({
             where: { id: user.id },
-            data: { tokenVersion: { increment: 1 }, hashedRefreshToken: null },
+            data: {
+                tokenVersion: { increment: 1 },
+                hashedRefreshToken: null
+            },
         })
-        throw { status: 403, message: "Token reuse detected. All sessions revoked." }
+        throw { status: 403, message: "Invalid refresh token" }
     }
 
     const permissions = await getUserPermissions(user.roleId)
@@ -126,12 +130,13 @@ export async function refreshSession(token: string) {
     return { accessToken: newAccessToken, refreshToken: newRefreshToken }
 }
 
-export async function handleGoogleOAuthUser(googleUser:
-    {
-        googleId: string;
-        email: string;
-        name: string
-    }) {
+export async function handleGoogleOAuthUser(
+    googleUser:
+        {
+            googleId: string;
+            email: string;
+            name: string
+        }) {
     let user = await prisma.user.findUnique({
         where: { email: googleUser.email },
         include: { role: true },
@@ -146,30 +151,24 @@ export async function handleGoogleOAuthUser(googleUser:
                 name: googleUser.name,
                 roleId: patientRole!.id,
                 accounts: {
-                    create: { provider: "GOOGLE", providerAccountId: googleUser.googleId },
+                    create:
+                    {
+                        provider: "GOOGLE",
+                        providerAccountId: googleUser.googleId
+                    },
                 },
             },
             include: { role: true },
         })
     } else {
-        const existingAccount = await prisma.account.findUnique({
+        const existingAccount = await prisma.account.findFirst({
             where: {
-                provider_providerAccountId: {
-                    provider: "GOOGLE",
-                    providerAccountId: googleUser.googleId,
-                },
+                provider: "GOOGLE",
+                providerAccountId: googleUser.googleId,
             },
-        })
+        });
 
-        if (!existingAccount) {
-            await prisma.account.create({
-                data: {
-                    userId: user.id,
-                    provider: "GOOGLE",
-                    providerAccountId: googleUser.googleId,
-                },
-            })
-        }
+
     }
 
     const permissions = await getUserPermissions(user.roleId)
