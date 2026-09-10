@@ -35,6 +35,6 @@ export async function getGoogleUserFromCode(code: string) {
     return {
         googleId: payload.sub,
         email: payload.email,
-        name: payload.name,
+        name: payload.name || "Patient",
     }
 }
