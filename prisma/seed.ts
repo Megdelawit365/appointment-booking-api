@@ -1,6 +1,8 @@
 import { prisma } from "../src/lib/prisma.js"
 
 async function main() {
+    // delete existing data
+
     await prisma.rolePermission.deleteMany({})
     await prisma.permission.deleteMany({})
     await prisma.role.deleteMany({})
@@ -13,29 +15,34 @@ async function main() {
         "appointments:delete:own",
     ]
 
+    // create permissions
     for (const action of permissions) {
         await prisma.permission.create({
-            data: { action },
+            data: { action }
         })
     }
 
+    // create roles
     const patientRole = await prisma.role.create({
-        data: { name: "PATIENT" },
+        data: { name: "PATIENT" }
     })
 
     const doctorRole = await prisma.role.create({
-        data: { name: "DOCTOR" },
+        data: { name: "DOCTOR" }
     })
 
     const adminRole = await prisma.role.create({
-        data: { name: "ADMIN" },
+        data: { name: "ADMIN" }
     })
+
+    // create permissions
 
     const patientPerms = ["appointments:create", "appointments:read:own", "appointments:update:own", "appointments:delete:own"]
     const doctorPerms = ["appointments:read:all"]
     const adminPerms = [...permissions]
 
     for (const action of patientPerms) {
+        // find each permission to get its id
         const perm = await prisma.permission.findUnique({ where: { action: action } })
         if (perm) {
             await prisma.rolePermission.create({
@@ -45,6 +52,8 @@ async function main() {
     }
 
     for (const action of doctorPerms) {
+        // find each permission to get its id
+
         const perm = await prisma.permission.findUnique({ where: { action: action } })
         if (perm) {
             await prisma.rolePermission.create({
@@ -54,6 +63,8 @@ async function main() {
     }
 
     for (const action of adminPerms) {
+        // find each permission to get its id
+
         const perm = await prisma.permission.findUnique({ where: { action: action } })
         if (perm) {
             await prisma.rolePermission.create({
