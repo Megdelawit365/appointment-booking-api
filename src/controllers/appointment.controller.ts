@@ -1,79 +1,72 @@
-import type { Request, Response, NextFunction } from "express"
-import type { CreateAppointmentInput, UpdateAppointmentInput } from "../schemas/appointment.schema.js"
-import * as appointmentServices from "../services/appointment.service.js"
+import { Request, Response, NextFunction } from "express"
+import * as appointmentService from "../services/appointment.service.js"
+import { prisma } from "../lib/prisma.js"
 
-export const getAppointments = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export async function create(req: Request, res: Response, next: NextFunction) {
     try {
-        const appointments = await appointmentServices.getAppointments(req.query)
-        return res.status(200).json({ data: appointments })
-    } catch (error) {
-        return next(error)
-    }
-}
-
-export const getAppointmentById = async (
-    req: Request<{ id: string }>,
-    res: Response,
-    next: NextFunction
-) => {
-    try {
-        const appointment = await appointmentServices.getAppointmentById(Number(req.params.id))
-        if (!appointment) {
-            return res.status(404).json({ message: "Appointment not found" });
+        if (!req.user) {
+            throw { status: 401, message: "Authentication required" }
         }
-        return res.status(200).json({ data: appointment })
+        const appointment = await appointmentService.createAppointment(req.user, req.body)
+        return res.status(201).json(appointment)
     } catch (error) {
-        return next(error)
+        next(error)
     }
 }
 
-export const createAppointment = async (
-    req: Request<{}, {}, CreateAppointmentInput>,
-    res: Response,
-    next: NextFunction
-) => {
+export async function getAll(req: Request, res: Response, next: NextFunction) {
     try {
-        const appointment = await appointmentServices.createAppointment(req.body)
-        return res.status(201).json({ data: appointment })
+        const appointments = await appointmentService.getAppointments(req.user!, req.query)
+        return res.json(appointments)
     } catch (error) {
-        return next(error)
+        next(error)
     }
 }
 
-export const updateAppointment = async (
-    req: Request<{ id: string }, {}, UpdateAppointmentInput>,
-    res: Response,
-    next: NextFunction
-) => {
+export async function getById(req: Request<{ id: string }>, res: Response, next: NextFunction) {
     try {
-        const updatedAppointment = await appointmentServices.updateAppointment(Number(req.params.id), req.body)
+        const appointment = await prisma.appointment.findUnique({
+            where: { id: req.params.id }
+        })
+        return res.json(appointment)
+    } catch (error) {
+        next(error)
+    }
+}
 
-        if (!updatedAppointment) {
-            return res.status(404).json({ message: "Appointment not found" });
+export async function update(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+    try {
+        if (!req.user) {
+            throw { status: 401, message: "Authentication required" }
         }
-        return res.status(200).json({ data: updatedAppointment })
+        const updated = await appointmentService.updateAppointment(req.user, req.params.id, req.body)
+        return res.json(updated)
     } catch (error) {
-        return next(error)
+        next(error)
     }
 }
 
-export const deleteAppointment = async (
-    req: Request<{ id: string }>,
-    res: Response,
-    next: NextFunction
-) => {
+export async function updateStatus(req: Request<{ id: string }>, res: Response, next: NextFunction) {
     try {
-        const deleteAppointment = await appointmentServices.deleteAppointment(Number(req.params.id))
-
-        if (!deleteAppointment) {
-            return res.status(404).json({ message: "Appointment not found" });
+        if (!req.user) {
+            throw { status: 401, message: "Authentication required" }
         }
-        return res.status(204).send()
+        const { status, notes } = req.body
+        const updated = await appointmentService.updateAppointmentStatus(req.user, req.params.id, status, notes)
+        return res.json(updated)
     } catch (error) {
-        return next(error)
+        next(error)
     }
-} 
+}
+
+export async function remove(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+    try {
+        if (!req.user) {
+            throw { status: 401, message: "Authentication required" }
+        }
+        const cancelled = await appointmentService.cancelAppointment(req.user, req.params.id)
+        return res.json(cancelled)
+    } catch (error) {
+        next(error)
+    }
+}
