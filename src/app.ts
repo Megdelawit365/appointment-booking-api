@@ -1,22 +1,28 @@
 import express from "express"
-const app = express()
-app.use(express.json())
+import helmet from "helmet"
+import cookieParser from "cookie-parser"
+import authRoutes from "./routes/auth.routes.js"
 import appointmentRoutes from "./routes/appointment.routes.js"
-import { notFound } from "./middlewares/notFound.js"
+import adminRoutes from "./routes/admin.routes.js"
 import { errorHandler } from "./middlewares/error.middleware.js"
 
-const startTime = Date.now()
+const app = express()
+
+app.use(helmet())
+app.use(express.json())
+app.use(cookieParser())
 
 app.get("/api/health", (req, res) => {
-    const currentTime = Date.now()
-    return res.json({
+    res.json({
+        status: "OK",
         timestamp: new Date().toISOString(),
-        uptime: (currentTime - startTime) / 1000
+        uptime: process.uptime()
     })
 })
 
+app.use("/api/auth", authRoutes)
 app.use("/api/appointments", appointmentRoutes)
-app.use(notFound)
+app.use("/api/admin", adminRoutes)
 app.use(errorHandler)
 
-export default app
+export default app 
