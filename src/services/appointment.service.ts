@@ -1,56 +1,160 @@
-import type { CreateAppointmentInput, UpdateAppointmentInput } from "../schemas/appointment.schema.js"
 import { prisma } from "../lib/prisma.js"
-import { Appointment, DepartmentEnum, Prisma } from "../generated/prisma/index.js"
+import { Department, AppointmentStatus } from "../generated/prisma/index.js"
 
-export interface AppointmentQueryFilters {
-    department?: DepartmentEnum
-    search?: string
-    isEmergency?: boolean
-}
+type User = { userId: string; role: string; permissions: string[] }
 
-export const getAppointments = async (filters?: AppointmentQueryFilters): Promise<Appointment[]> => {
-    const { department, search, isEmergency } = filters || {}
+export async function createAppointment(
+    user: User,
+    data: {
+        department: Department
+        appointmentDate: string
+        symptoms: string
+        isEmergency: boolean
+    }
+) {
+    if (!user.permissions.includes("appointments:create")) {
+        throw { status: 403, message: "Forbidden" }
+    }
 
-    return await prisma.appointment.findMany({
+    const bookingDate = new Date(data.appointmentDate)
+
+    const existingBooking = await prisma.appointment.findFirst({
         where: {
-            ...(department && { department }),
-            ...(isEmergency !== undefined && { isEmergency }),
-            ...(search && {
-                OR: [
-                    { patientName: { contains: search, mode: 'insensitive' } },
-                    { symptoms: { contains: search, mode: 'insensitive' } }
-                ]
-            })
+            department: data.department,
+            appointmentDate: bookingDate,
+            status: { in: ["PENDING", "CONFIRMED"] },
+        },
+    })
+
+    if (existingBooking) {
+        throw { status: 409, message: "Booking date conflict" }
+    }
+
+    return prisma.appointment.create({
+        data: {
+            patientId: user.userId,
+            department: data.department,
+            appointmentDate: bookingDate,
+            symptoms: data.symptoms,
+            isEmergency: data.isEmergency,
         },
     })
 }
 
-export const getAppointmentById = async (id: number): Promise<Appointment | null> => {
-    const appointment = await prisma.appointment.findUnique({ where: { id: id } })
+export async function getAppointments(user: User, filters: any) {
+    const canReadOwn = user.permissions.includes("appointments:read_own")
+    const canReadAll = user.permissions.includes("appointments:read_all")
+
+    if (!canReadOwn && !canReadAll) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    const isPatient = user.role === "PATIENT" && !canReadAll
+
+    return prisma.appointment.findMany({
+        where: {
+            ...(isPatient && { patientId: user.userId }),
+            ...(filters.department && { department: filters.department }),
+            ...(filters.isEmergency !== undefined && { isEmergency: filters.isEmergency }),
+            ...(filters.search && {
+                OR: [
+                    { patientName: { contains: filters.search, mode: 'insensitive' } },
+                    { symptoms: { contains: filters.search, mode: 'insensitive' } }
+                ]
+            })
+        }
+    })
+}
+
+export async function getAppointmentById(user: User, id: string) {
+    const canReadOwn = user.permissions.includes("appointments:read_own")
+    const canReadAll = user.permissions.includes("appointments:read_all")
+
+    if (!canReadOwn && !canReadAll) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    if (!appointment) throw { status: 404, message: "Appointment not found" }
+
+    const isOwner = appointment.patientId === user.userId
+    if (!isOwner && !canReadAll) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
     return appointment
 }
 
-export const createAppointment = async (data: CreateAppointmentInput): Promise<Appointment> => {
-    const newAppointment = await prisma.appointment.create({
-        data: data
+export async function updateAppointment(
+    user: User,
+    id: string,
+    data: {
+        appointmentDate?: string,
+        symptoms?: string,
+
+    }
+) {
+    if (!user.permissions.includes("appointments:update:own")) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    if (!appointment) throw { status: 404, message: "Appointment not found" }
+
+    if (appointment.patientId !== user.userId) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    if (appointment.status !== "PENDING") {
+        throw { status: 400, message: "Only PENDING appointments can be updated" }
+    }
+
+    return prisma.appointment.update({
+        where: { id },
+        data: {
+            appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : appointment.appointmentDate,
+            symptoms: data.symptoms,
+        },
     })
-    return newAppointment
 }
 
-export const updateAppointment = async (id: number, data: UpdateAppointmentInput): Promise<Appointment | null> => {
-    const updatedAppointment = await prisma.appointment.update({
-        where: { id: id },
-        data: data
-    })
-    return updatedAppointment
+export async function updateAppointmentStatus(
+    user: User,
+    id: string,
+    status: AppointmentStatus,
+    notes?: string
+) {
+    const hasPermission = user.permissions.includes("appointments:manage_status")
+    const isAuthorizedRole = user.role === "DOCTOR" || user.role === "ADMIN"
 
+    if (!hasPermission || !isAuthorizedRole) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    return prisma.appointment.update({
+        where: { id },
+        data: { status: status, notes: notes },
+    })
 }
 
-export const deleteAppointment = async (id: number): Promise<boolean> => {
-    await prisma.appointment.delete({
-        where: {
-            id: id
-        }
+export async function cancelAppointment(user: User, id: string) {
+    if (!user.permissions.includes("appointments:delete:own")) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    if (!appointment) throw { status: 404, message: "Appointment not found" }
+
+    if (appointment.patientId !== user.userId) {
+        throw { status: 403, message: "Forbidden" }
+    }
+
+    if (appointment.status !== "PENDING") {
+        throw { status: 400, message: "Only PENDING appointments can be cancelled" }
+    }
+
+    return prisma.appointment.update({
+        where: { id },
+        data: { status: "CANCELLED" },
     })
-    return true
 }
